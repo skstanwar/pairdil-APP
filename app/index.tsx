@@ -1,38 +1,104 @@
-import {useEffect, useState} from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, TextInput, FlatList, Button, TouchableOpacity } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import {loadUserData} from '@/Hook/Userdata';
+import { loadUserData } from '@/Hook/Userdata';
 import { Menu, Provider } from 'react-native-paper';
+import { io } from 'socket.io-client';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SOCKET_URL } from '@/Config/Env'
+const socket = io(SOCKET_URL);
+
 export default function IndexScreen() {
-    const router = useRouter();
+  
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [message, setMessage] = useState('');
+  const [chatLog, setChatLog] = useState<string[]>([]);
 
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
+
   useEffect(() => {
     const checkLoginStatus = async () => {
       const user = await loadUserData();
+      
       if (user?.token) {
         setIsLoggedIn(true);
       } else {
         setIsLoggedIn(false);
-        router.replace('/auth/login'); // redirect if not logged in
+        router.replace('/auth/login');
       }
     };
 
     checkLoginStatus();
   }, []);
 
+  useEffect(() => {
+    socket.on('receive_msg', ({ userId, msg }) => {
+      setChatLog(prev => [...prev, `${userId}: ${msg}`]);
+    });
+
+    socket.on('receive_feeling', ({ feeling }) => {
+      setChatLog(prev => [...prev, `💌 Feeling: ${feeling}`]);
+    });
+
+    socket.on('receive_location', ({ lat, lon }) => {
+      setChatLog(prev => [...prev, `📍 Location: (${lat}, ${lon})`]);
+    });
+
+    return () => {
+      socket.off('receive_msg');
+      socket.off('receive_feeling');
+      socket.off('receive_location');
+    };
+  }, []);
+const [name, setName] = useState('You');
+
+useEffect(() => {
+  AsyncStorage.getItem('USER_DATA')
+    .then(data => {
+      const userData = JSON.parse(data || '{}');
+      setName(userData?.user?.name || 'You');
+    });
+}, []);
+  const sendMessage = () => {
+    if (message.trim()) {
+      const userId = name;
+      socket.emit('send_message', { userId, msg: message });
+      setChatLog(prev => [...prev, `${userId}: ${message}`]);
+      setMessage('');
+    }
+  };
+
+  const sendFeeling = (feeling: string) => {
+    socket.emit('send_feeling', { feeling });
+    setChatLog(prev => [...prev, `💌 Feeling: ${feeling}`]);
+  };
+
+  const shareLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Location permission denied');
+      return;
+    }
+    const location = await Location.getCurrentPositionAsync({});
+    const lat = location.coords.latitude;
+    const lon = location.coords.longitude;
+    socket.emit('send_location', { lat, lon });
+    setChatLog(prev => [...prev, `📍 You shared location: (${lat}, ${lon})`]);
+  };
+
   if (!isLoggedIn) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
     <Provider>
       <View style={styles.container}>
-        {/* Header with profile icon and menu */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Pairdil</Text>
           <Menu
@@ -44,71 +110,92 @@ export default function IndexScreen() {
               </Pressable>
             }
           >
-            <Menu.Item
-              onPress={() => {
-                closeMenu();
-                router.push('/user/profile');
-              }}
-              title="Profile"
-            />
-            
-            <Menu.Item
-              onPress={() => {
-                closeMenu();
-                router.push('/services');
-              }}
-              title="Services"
-            />
-            <Menu.Item
-              onPress={() => {
-                closeMenu();
-                router.push('/qr-code');
-              }}
-              title="QR Code"
-            />
-            <Menu.Item
-              onPress={() => {
-                closeMenu();
-                router.push('/about');
-              }}
-              title="About"
-            />
+            <Menu.Item onPress={() => { closeMenu(); router.push('/user/profile'); }} title="Profile" />
+            <Menu.Item onPress={() => { closeMenu(); router.push('/services'); }} title="Services" />
+            <Menu.Item onPress={() => { closeMenu(); router.push('/qr-code'); }} title="QR Code" />
+            <Menu.Item onPress={() => { closeMenu(); router.push('/about'); }} title="About" />
           </Menu>
         </View>
 
-        {/* Main Content */}
+        {/* Body: Chat Panel */}
         <View style={styles.body}>
-          <Text style={styles.welcome}>Welcome to the app! 🎉</Text>
+          <FlatList
+            data={chatLog}
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={({ item }) => <Text style={styles.message}>{item}</Text>}
+            contentContainerStyle={{ paddingBottom: 120 }}
+          />
+
+          {/* Attachment Buttons */}
+          <View style={styles.attachments}>
+            <TouchableOpacity style={styles.emojiBtn} onPress={() => sendFeeling('😊')}>
+              <Text>😊</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.emojiBtn} onPress={() => sendFeeling('😢')}>
+              <Text>😢</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.emojiBtn} onPress={() => sendFeeling('❤️')}>
+              <Text>❤️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.emojiBtn} onPress={shareLocation}>
+              <MaterialIcons name="location-on" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Input Panel */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Type a message..."
+            />
+            <Button title="Send" onPress={sendMessage} />
+          </View>
         </View>
       </View>
     </Provider>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 50,
-    backgroundColor: '#fff',
+  container: { flex: 1, paddingTop: 50, backgroundColor: '#fff' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20 },
+  title: { fontSize: 24, fontWeight: 'bold' },
+  body: { flex: 1, paddingHorizontal: 10, paddingBottom: 60 },
+  message: {
+    fontSize: 16,
+    marginVertical: 4,
+    backgroundColor: '#f1f1f1',
+    padding: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
-  header: {
+  inputContainer: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: '#eee',
+    borderRadius: 20,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 10,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  input: { flex: 1, height: 40 },
+  attachments: {
+    position: 'absolute',
+    bottom: 60,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
   },
-  body: {
-    flex: 1,
+  emojiBtn: {
+    backgroundColor: '#ddd',
+    padding: 8,
+    borderRadius: 20,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  welcome: {
-    fontSize: 20,
-    color: '#333',
   },
 });

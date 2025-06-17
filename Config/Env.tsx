@@ -1,1 +1,2 @@
 export const API_URL="https://8080-skstanwar-empty-i6hbodvtm7h.ws-us120.gitpod.io"
+export const SOCKET_URL="https://8080-skstanwar-empty-i6hbodvtm7h.ws-us120.gitpod.io"
