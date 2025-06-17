@@ -41,12 +41,12 @@ export default function IndexScreen() {
       setChatLog(prev => [...prev, `${userId}: ${msg}`]);
     });
 
-    socket.on('receive_feeling', ({ feeling }) => {
-      setChatLog(prev => [...prev, `💌 Feeling: ${feeling}`]);
+    socket.on('receive_feeling', ({userId, feeling }) => {
+      setChatLog(prev => [...prev, `${userId}💌 Feeling: ${feeling}`]);
     });
 
-    socket.on('receive_location', ({ lat, lon }) => {
-      setChatLog(prev => [...prev, `📍 Location: (${lat}, ${lon})`]);
+    socket.on('receive_location', ({userId, coordinates }) => {
+      setChatLog(prev => [...prev, `${userId}📍 Location: (${coordinates})`]);
     });
 
     return () => {
@@ -64,32 +64,43 @@ useEffect(() => {
       setName(userData?.user?.name || 'You');
     });
 }, []);
+const userId = name;
   const sendMessage = () => {
     if (message.trim()) {
-      const userId = name;
+      
       socket.emit('send_message', { userId, msg: message });
-      setChatLog(prev => [...prev, `${userId}: ${message}`]);
+      setChatLog(prev => [...prev, `You: ${message}`]);
       setMessage('');
     }
   };
 
   const sendFeeling = (feeling: string) => {
-    socket.emit('send_feeling', { feeling });
-    setChatLog(prev => [...prev, `💌 Feeling: ${feeling}`]);
+    socket.emit('send_feeling', {userId, feeling });
+    setChatLog(prev => [...prev, `💌 Your Feeling: ${feeling}`]);
   };
 
   const shareLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Location permission denied');
-      return;
-    }
-    const location = await Location.getCurrentPositionAsync({});
-    const lat = location.coords.latitude;
-    const lon = location.coords.longitude;
-    socket.emit('send_location', { lat, lon });
-    setChatLog(prev => [...prev, `📍 You shared location: (${lat}, ${lon})`]);
-  };
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    alert('Location permission denied');
+    return;
+  }
+
+  const location = await Location.getCurrentPositionAsync({});
+  const lat = location.coords.latitude;
+  const lon = location.coords.longitude;
+
+  socket.emit('send_location', {
+    userId: name, // or replace with the correct identifier
+    coordinates: [lat, lon]
+  });
+
+  setChatLog(prev => [
+    ...prev,
+    `📍 You shared location: (${lat.toFixed(4)}, ${lon.toFixed(4)})`
+  ]);
+};
+
 
   if (!isLoggedIn) {
     return null;
