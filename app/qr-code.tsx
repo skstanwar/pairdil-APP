@@ -4,7 +4,7 @@ import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-ca
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import QRCode from 'react-native-qrcode-svg';
-import { API_URL } from '@/Config/Env'
+import { API_URL } from '@/Config/env'
 
 export default function QRCodeScreen() {
   const [permission, requestPermission] = useCameraPermissions();

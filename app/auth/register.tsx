@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { TextInput, Button, Text, RadioButton } from 'react-native-paper';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { API_URL } from '@/Config/Env'
+import { API_URL } from '@/Config/env'
 
 export default function Register() {
   const router = useRouter();

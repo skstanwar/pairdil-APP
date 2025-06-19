@@ -1,0 +1,2 @@
+export const API_URL="https://d39a79ac-0e03-4cd8-b0df-2f11a85ca780-00-19bxniveq00c8.pike.replit.dev"
+export const SOCKET_URL="https://d39a79ac-0e03-4cd8-b0df-2f11a85ca780-00-19bxniveq00c8.pike.replit.dev"

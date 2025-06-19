@@ -3,7 +3,7 @@ import { TextInput, Button, Text } from 'react-native-paper';
 import { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { API_URL } from '@/Config/Env'
+import { API_URL } from '@/Config/env'
 import { saveUserData } from '@/Hook/Userdata';
 export default function Login() {
   const router = useRouter();

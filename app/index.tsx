@@ -4,12 +4,9 @@ import { Redirect, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { loadUserData } from '@/Hook/Userdata';
 import { Menu, Provider } from 'react-native-paper';
-import { io } from 'socket.io-client';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SOCKET_URL } from '@/Config/Env'
-const socket = io(SOCKET_URL);
-
+import { socket } from '@/Hook/socker.connect';
 export default function IndexScreen() {
   
   const router = useRouter();
@@ -116,15 +113,16 @@ const userId = name;
             visible={menuVisible}
             onDismiss={closeMenu}
             anchor={
-              <Pressable onPress={openMenu}>
-                <MaterialIcons name="account-circle" size={32} color="#333" />
-              </Pressable>
+              <Pressable onPress={openMenu} style={{ backgroundColor: 'red', padding: 10 }}>
+              <MaterialIcons name="account-circle" size={32} color="#000000" />
+            </Pressable>
             }
           >
             <Menu.Item onPress={() => { closeMenu(); router.push('/user/profile'); }} title="Profile" />
             <Menu.Item onPress={() => { closeMenu(); router.push('/services'); }} title="Services" />
             <Menu.Item onPress={() => { closeMenu(); router.push('/qr-code'); }} title="QR Code" />
             <Menu.Item onPress={() => { closeMenu(); router.push('/about'); }} title="About" />
+            <Menu.Item onPress={() => { closeMenu(); router.push('/setting'); }} title="Setting" />
           </Menu>
         </View>
 
