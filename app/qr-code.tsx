@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Button, StyleSheet, Image, Alert } from 'react-native';
-import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { API_URL } from '@/Config/env';
+import { socket } from '@/Hook/socker.connect';
+import { loadUserData } from '@/Hook/Userdata';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
+import { useEffect, useState } from 'react';
+import { Alert, Button, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { API_URL } from '@/Config/env'
-
 export default function QRCodeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
@@ -22,14 +23,55 @@ export default function QRCodeScreen() {
     setScanning(false);
      const userData = await AsyncStorage.getItem('USER_DATA').then(data => JSON.parse(data));
      const token = userData.token;
-     console.log(result.data)
+    //  console.log(result.data)
     try {
       const res = await axios.post(
         `${API_URL}/api/pair/paircodeverify`,
         { code: result.data },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log(res)
+      if (res.status === 200) {
+        console.log('✅ Code verified');
+  
+        // Step 2: Get updated profile
+        const profileRes = await axios.get(`${API_URL}/api/user/getprofile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // console.log("newdata", profileRes.data)
+        const existingData = JSON.parse(await AsyncStorage.getItem('USER_DATA')) || {};
+  
+        // Step 3: Update USER_DATA with new user object
+        const updatedData = {
+          ...existingData,
+          user: profileRes.data || existingData.user,
+        };
+
+
+        //  send notification to the partner's device
+        (async () => {
+          try {
+            const userData = await loadUserData();
+            const userId = userData?.user?._id;
+            const partnerId = userData?.user?.partnerId;
+        
+            if (userId) {
+              socket.emit('sendpairid', { userId,partnerId });
+              console.log('✅ Sent sendpairid with userId:', userId);
+            } else {
+              console.warn('⚠️ userId not found in user data');
+            }
+          } catch (err) {
+            console.error('❌ Failed to emit sendpairid:', err);
+          }
+        })();
+        
+        await AsyncStorage.setItem('USER_DATA', JSON.stringify(updatedData));
+        console.log('✅ USER_DATA updated:', updatedData);
+  
+        return updatedData;
+      } else {
+        console.warn('❌ Invalid status code:', res.status);
+      }
     } catch (error) {
       console.error('QR verification error:', error);
       Alert.alert('Error', 'Invalid QR code');
@@ -65,6 +107,7 @@ export default function QRCodeScreen() {
           style={styles.camera}
           onBarcodeScanned={handleBarCodeScanned}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+          autoFocus="on"
         />
       )}
 

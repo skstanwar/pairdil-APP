@@ -53,26 +53,28 @@ export default function IndexScreen() {
     };
   }, []);
 const [name, setName] = useState('You');
+const [partnerId, setpartnerId] = useState('NULL');
 
 useEffect(() => {
   AsyncStorage.getItem('USER_DATA')
     .then(data => {
       const userData = JSON.parse(data || '{}');
       setName(userData?.user?.name || 'You');
+      setpartnerId(userData?.user?.partnerId || 'NULL');
     });
 }, []);
 const userId = name;
   const sendMessage = () => {
     if (message.trim()) {
       
-      socket.emit('send_message', { userId, msg: message });
+      socket.emit('send_message', { userId,partnerId, msg: message });
       setChatLog(prev => [...prev, `You: ${message}`]);
       setMessage('');
     }
   };
 
   const sendFeeling = (feeling: string) => {
-    socket.emit('send_feeling', {userId, feeling });
+    socket.emit('send_feeling', {userId,partnerId, feeling });
     setChatLog(prev => [...prev, `💌 Your Feeling: ${feeling}`]);
   };
 
@@ -88,7 +90,8 @@ const userId = name;
   const lon = location.coords.longitude;
 
   socket.emit('send_location', {
-    userId: name, // or replace with the correct identifier
+    userId,
+    partnerId, // or replace with the correct identifier
     coordinates: [lat, lon]
   });
 

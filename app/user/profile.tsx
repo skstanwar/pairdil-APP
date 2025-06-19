@@ -8,6 +8,7 @@ type UserType = {
   gender: string;
   phone: string;
   statusMessage: string;
+  partnerId: string;
 };
 
 export default function ProfileScreen() {
@@ -42,6 +43,7 @@ export default function ProfileScreen() {
       <Text style={styles.label}>Email: <Text style={styles.value}>{user.email}</Text></Text>
       <Text style={styles.label}>Gender: <Text style={styles.value}>{user.gender}</Text></Text>
       <Text style={styles.label}>Phone: <Text style={styles.value}>{user.phone}</Text></Text>
+      <Text style={styles.label}>PartnerID: <Text style={styles.value}>{user.partnerId}</Text></Text>
       <Text style={styles.label}>Status: <Text style={styles.value}>{user.statusMessage || 'No status set'}</Text></Text>
     </View>
   );
